@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,9 +15,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import type { User } from "@/types"; // For mock login data structure
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -25,7 +27,7 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const { toast } = useToast();
-  const router = useRouter();
+  const { login: authLogin, loading: authLoading } = useAuth(); // Renamed to avoid conflict
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -37,16 +39,18 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Login values:", values);
-    toast({
-      title: "Login Successful",
-      description: "Redirecting to your profile...",
-    });
-    // In a real app, you would call Firebase Auth here
-    // and then redirect.
-    router.push("/profile"); 
+    // In a real app, you would call Firebase Auth here.
+    // For now, we use the mock login from AuthContext.
+    // The AuthContext's login function will handle redirection.
+    // We just pass the email, the mock context figures out the user.
+    authLogin({ email: values.email }); 
+    // Toast for successful login will be handled by redirection or can be added here
+    // For example, if login is successful, AuthContext might redirect,
+    // or you could show a toast before that.
+    // toast({
+    //   title: "Login Initiated",
+    //   description: "Attempting to sign you in...",
+    // });
   }
 
   return (
@@ -94,8 +98,8 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Signing in..." : <> <LogIn className="mr-2 h-4 w-4" /> Sign In</>}
+        <Button type="submit" className="w-full" disabled={authLoading || form.formState.isSubmitting}>
+          {authLoading || form.formState.isSubmitting ? "Signing in..." : <> <LogIn className="mr-2 h-4 w-4" /> Sign In</>}
         </Button>
       </form>
     </Form>

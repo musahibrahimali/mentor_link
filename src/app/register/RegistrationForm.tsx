@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,9 +17,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserRoleToggle } from "./UserRoleToggle";
-import type { UserRole } from "@/types";
+import type { UserRole, User } from "@/types";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -29,9 +31,10 @@ const formSchema = z.object({
 
 export function RegistrationForm() {
   const { toast } = useToast();
-  const router = useRouter();
+  // const router = useRouter(); // AuthContext will handle redirection
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
+  const { register: authRegister, loading: authLoading } = useAuth();
 
   const initialRole = searchParams.get("role") as UserRole | undefined;
 
@@ -41,7 +44,7 @@ export function RegistrationForm() {
       name: "",
       email: "",
       password: "",
-      role: initialRole || undefined,
+      role: initialRole && (initialRole === 'mentor' || initialRole === 'mentee') ? initialRole : undefined,
     },
   });
   
@@ -54,16 +57,21 @@ export function RegistrationForm() {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Registration values:", values);
+    // Simulate API call & Firebase Auth via AuthContext
+    const newUser: User = {
+        id: '', // Will be set by AuthContext or backend
+        name: values.name,
+        email: values.email,
+        role: values.role,
+        // profilePictureUrl can be set later or a default
+    };
+    authRegister(newUser);
+    // Toast for successful registration is good
     toast({
-      title: "Registration Successful",
-      description: "Your account has been created. Please complete your profile.",
+      title: "Registration Initiated",
+      description: "Creating your account...",
     });
-    // In a real app, you would call Firebase Auth here
-    // and then redirect.
-    router.push("/profile/create");
+    // AuthContext's register function will handle redirection to /profile/create
   }
 
   return (
@@ -137,8 +145,8 @@ export function RegistrationForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Creating account..." : <><UserPlus className="mr-2 h-4 w-4" /> Create Account</>}
+        <Button type="submit" className="w-full" disabled={authLoading || form.formState.isSubmitting}>
+          {authLoading || form.formState.isSubmitting ? "Creating account..." : <><UserPlus className="mr-2 h-4 w-4" /> Create Account</>}
         </Button>
       </form>
     </Form>
