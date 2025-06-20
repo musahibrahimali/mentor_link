@@ -14,11 +14,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import type { User } from "@/types"; // For mock login data structure
+import { Separator } from "@/components/ui/separator";
+import Image from "next/image";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -26,8 +26,7 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
-  const { toast } = useToast();
-  const { login: authLogin, loading: authLoading } = useAuth(); // Renamed to avoid conflict
+  const { login, googleLogin, loading: authLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -39,19 +38,14 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real app, you would call Firebase Auth here.
-    // For now, we use the mock login from AuthContext.
-    // The AuthContext's login function will handle redirection.
-    // We just pass the email, the mock context figures out the user.
-    authLogin({ email: values.email }); 
-    // Toast for successful login will be handled by redirection or can be added here
-    // For example, if login is successful, AuthContext might redirect,
-    // or you could show a toast before that.
-    // toast({
-    //   title: "Login Initiated",
-    //   description: "Attempting to sign you in...",
-    // });
+    await login({ email: values.email, password: values.password });
+    // Redirection is handled by AuthContext or LoginPage
   }
+
+  const handleGoogleSignIn = async () => {
+    await googleLogin();
+     // Redirection is handled by AuthContext or LoginPage
+  };
 
   return (
     <Form {...form}>
@@ -100,6 +94,24 @@ export function LoginForm() {
         />
         <Button type="submit" className="w-full" disabled={authLoading || form.formState.isSubmitting}>
           {authLoading || form.formState.isSubmitting ? "Signing in..." : <> <LogIn className="mr-2 h-4 w-4" /> Sign In</>}
+        </Button>
+
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={authLoading}>
+          <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+            <path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.5 512 0 398.8 0 256S110.5 0 244 0c69.8 0 130.8 27.2 177.7 70.4l-66.3 66.3C322.5 103.5 286.3 80 244 80c-82.6 0-150.1 66.6-150.1 148.6s67.4 148.6 150.1 148.6c97.9 0 130.9-73.2 134-114.4H244v-79.3h236.2c2.6 13.5 4.2 28.1 4.2 43.3z"></path>
+          </svg>
+          Google
         </Button>
       </form>
     </Form>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +17,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Send } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const formSchema = z.object({
   message: z.string().min(10, { message: "Message must be at least 10 characters." }).max(500, { message: "Message cannot exceed 500 characters." }),
@@ -28,24 +32,50 @@ interface InterestFormProps {
 
 export function InterestForm({ mentorName, mentorId }: InterestFormProps) {
   const { toast } = useToast();
+  const { user: authUser } = useAuth(); // Get current authenticated user
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      message: `Hi ${mentorName}, I'm interested in learning more about your mentorship.`,
+      message: `Hi ${mentorName}, I'm interested in learning more about your mentorship. My name is ${authUser?.name || ''} and I'm looking for guidance in...`,
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Interest form submission for mentor ID:", mentorId, "Values:", values);
-    toast({
-      title: "Interest Expressed!",
-      description: `Your message has been sent to ${mentorName}.`,
-    });
-    form.reset({ message: `Hi ${mentorName}, I'm interested in learning more about your mentorship.`});
+    if (!authUser) {
+      toast({ title: "Authentication Error", description: "You must be logged in to send a message.", variant: "destructive" });
+      return;
+    }
+
+    // Simulate API call - In a real app, this would create a "message" or "interest" document in Firestore.
+    // Example: Save to a "interestRequests" collection
+    try {
+      await addDoc(collection(db, "interestRequests"), {
+        mentorId: mentorId,
+        mentorName: mentorName,
+        menteeId: authUser.id,
+        menteeName: authUser.name,
+        menteeEmail: authUser.email,
+        message: values.message,
+        status: "pending", // Initial status
+        requestedAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Interest Expressed!",
+        description: `Your message has been sent to ${mentorName}. They will be notified.`,
+      });
+      form.reset({ message: `Hi ${mentorName}, I'm interested in learning more about your mentorship.`});
+    } catch (error) {
+        console.error("Error sending interest request:", error);
+        toast({ title: "Error", description: "Could not send your message. Please try again.", variant: "destructive"});
+    }
   }
+
+  if (!authUser) {
+    return <p className="text-muted-foreground">Please log in to express interest.</p>;
+  }
+
 
   return (
     <Form {...form}>
@@ -64,7 +94,7 @@ export function InterestForm({ mentorName, mentorId }: InterestFormProps) {
                 />
               </FormControl>
               <FormDescription>
-                Keep it concise and professional (max 500 characters).
+                Keep it concise and professional (max 500 characters). This will be sent to {mentorName}.
               </FormDescription>
               <FormMessage />
             </FormItem>

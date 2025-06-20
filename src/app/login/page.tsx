@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -14,17 +15,32 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirect to a relevant page, e.g., dashboard or profile
       if (user.role === 'admin') router.push('/dashboard/admin');
       else if (user.role === 'mentor') router.push('/dashboard/mentor');
-      else router.push('/dashboard/mentee');
+      else if (user.role === 'mentee') router.push('/dashboard/mentee');
+      else router.push('/profile'); // Fallback, should ideally go to role-specific dash
     }
   }, [user, loading, router]);
 
-  if (loading || user) {
-    // Show loading or null if user exists to prevent flash of login page
-    return <div className="container mx-auto flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 px-4">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="container mx-auto flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 px-4">
+        <div className="w-full max-w-md space-y-4">
+          <Skeleton className="h-10 w-3/4 mx-auto" />
+          <Skeleton className="h-8 w-1/2 mx-auto" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    );
   }
+  
+  if (user && !loading) { // If user is loaded and exists, don't show login form
+      return <div className="container mx-auto flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 px-4">Redirecting...</div>;
+  }
+
 
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 px-4">

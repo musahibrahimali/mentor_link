@@ -1,79 +1,81 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { MentorCard } from "@/components/features/mentorship/MentorCard";
-import type { Mentor } from "@/types";
+import type { Mentor } from "@/types"; // Ensure Mentor type is comprehensive
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter } from "lucide-react";
-
-const mockMentors: Mentor[] = [
-  {
-    id: "1",
-    name: "Dr. Eleanor Vance",
-    email: "eleanor@example.com",
-    role: "mentor",
-    bio: "Passionate AI researcher with 10+ years in Machine Learning and Natural Language Processing. Eager to guide aspiring data scientists and AI enthusiasts.",
-    skills: ["Machine Learning", "Python", "NLP", "Deep Learning", "Research"],
-    interests: ["AI Ethics", "Reinforcement Learning", "Academic Writing"],
-    availability: "Weekends, Tuesday evenings",
-    profilePictureUrl: "https://placehold.co/300x300/666699/F5F5FA.png?text=EV",
-  },
-  {
-    id: "2",
-    name: "Marcus Chen",
-    email: "marcus@example.com",
-    role: "mentor",
-    bio: "Full-stack developer and startup founder. I can help with web technologies (React, Node.js), product development, and entrepreneurial mindset.",
-    skills: ["React", "Node.js", "TypeScript", "Product Management", "Agile"],
-    interests: ["SaaS", "FinTech", "Growth Hacking"],
-    availability: "Monday & Wednesday evenings",
-    profilePictureUrl: "https://placehold.co/300x300/996699/FAF5FA.png?text=MC",
-  },
-  {
-    id: "3",
-    name: "Aisha Khan",
-    email: "aisha@example.com",
-    role: "mentor",
-    bio: "UX Design Lead with a focus on user-centered design and accessibility. I love helping new designers build their portfolios and navigate the industry.",
-    skills: ["UX Design", "UI Design", "Figma", "User Research", "Accessibility"],
-    interests: ["Design Systems", "Inclusive Design", "Mobile UX"],
-    availability: "Flexible, by appointment",
-    profilePictureUrl: "https://placehold.co/300x300/669999/F0F5F5.png?text=AK",
-  },
-  {
-    id: "4",
-    name: "David Miller",
-    email: "david@example.com",
-    role: "mentor",
-    bio: "Marketing strategist with experience in digital marketing, SEO, and content creation. Let's grow your brand or career in marketing!",
-    skills: ["Digital Marketing", "SEO", "Content Strategy", "Social Media", "Analytics"],
-    interests: ["E-commerce", "Brand Building", "Video Marketing"],
-    availability: "Saturday mornings",
-  },
-];
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function MentorList() {
+  const [allMentors, setAllMentors] = useState<Mentor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSkill, setFilterSkill] = useState("all");
+  const { toast } = useToast();
+
+  const fetchMentors = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const mentorsQuery = query(collection(db, "users"), where("role", "==", "mentor"), where("isActive", "==", true));
+      const querySnapshot = await getDocs(mentorsQuery);
+      const mentorsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Mentor));
+      setAllMentors(mentorsList);
+    } catch (error) {
+      console.error("Error fetching mentors:", error);
+      toast({ title: "Error", description: "Could not load mentors.", variant: "destructive" });
+    }
+    setIsLoading(false);
+  }, [toast]);
+
+  useEffect(() => {
+    fetchMentors();
+  }, [fetchMentors]);
 
   const allSkills = useMemo(() => {
     const skillsSet = new Set<string>();
-    mockMentors.forEach(mentor => mentor.skills.forEach(skill => skillsSet.add(skill)));
+    allMentors.forEach(mentor => {
+      if (mentor.skills && Array.isArray(mentor.skills)) {
+        mentor.skills.forEach(skill => skillsSet.add(skill));
+      }
+    });
     return Array.from(skillsSet).sort();
-  }, []);
+  }, [allMentors]);
 
   const filteredMentors = useMemo(() => {
-    return mockMentors.filter((mentor) => {
-      const matchesSearchTerm =
-        mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentor.bio.toLowerCase().includes(searchTerm.toLowerCase());
+    return allMentors.filter((mentor) => {
+      const nameMatch = mentor.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const bioMatch = mentor.bio?.toLowerCase().includes(searchTerm.toLowerCase());
+      const skillsMatch = mentor.skills?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      const matchesSkill = filterSkill === "all" || mentor.skills.includes(filterSkill);
+      const matchesSearchTerm = nameMatch || bioMatch || skillsMatch;
+      
+      const matchesSkill = filterSkill === "all" || (mentor.skills && mentor.skills.includes(filterSkill));
 
       return matchesSearchTerm && matchesSkill;
     });
-  }, [searchTerm, filterSkill]);
+  }, [allMentors, searchTerm, filterSkill]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-card p-6 rounded-lg shadow-md border">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-[400px] w-full rounded-lg" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -86,7 +88,7 @@ export function MentorList() {
               <Input
                 id="search-mentors"
                 type="text"
-                placeholder="Search by name, keyword..."
+                placeholder="Search by name, bio, skill..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -97,8 +99,10 @@ export function MentorList() {
             <label htmlFor="filter-skill" className="block text-sm font-medium text-muted-foreground mb-1">Filter by Skill</label>
              <Select value={filterSkill} onValueChange={setFilterSkill}>
               <SelectTrigger id="filter-skill" className="w-full">
-                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Filter by skill" />
+                <div className="flex items-center">
+                    <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Filter by skill" />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Skills</SelectItem>

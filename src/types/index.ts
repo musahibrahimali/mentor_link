@@ -1,45 +1,34 @@
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type UserRole = 'mentor' | 'mentee' | 'admin';
 
 export interface User {
-  id: string;
+  id: string; // This will be Firebase Auth UID
   name: string;
   email: string;
   role: UserRole;
-  profileId?: string; // This could be an ID to a more detailed profile in Firestore
-  // For convenience in AuthContext, we can include some profile details directly
   bio?: string;
-  skills?: string[];
-  interests?: string[];
+  skills?: string[]; // Stored as an array of strings
+  interests?: string[]; // Stored as an array of strings
   availability?: string;
   profilePictureUrl?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  isActive?: boolean; // For admin soft delete/deactivation
 }
 
-// Profile might be a more detailed, separate document in Firestore
-export interface Profile {
-  id: string; // Corresponds to profileId in User or could be same as userId
-  userId: string;
-  bio: string;
-  skills: string[];
-  interests: string[];
-  availability?: string; 
-  profilePictureUrl?: string;
-  // Mentor-specific
-  mentees?: string[]; // Array of mentee user IDs
-  // Mentee-specific
-  currentMentorId?: string; // Mentor user ID
+export interface Profile extends Omit<User, 'id' | 'email' | 'role' | 'isActive'> {
+  // Profile specific fields if we decide to separate them strictly
+  // For now, User interface holds all common profile fields
 }
 
-// These types can be refined as data models in Firestore are finalized
 export interface Mentor extends User {
-  // Mentor-specific fields from Profile can be merged here if User is the primary document
-  // Or this can extend Profile if Profile is the primary document fetched
-  mentees?: string[]; 
+  // Mentor-specific fields, if any beyond User + Profile
 }
 
 export interface Mentee extends User {
-  // Mentee-specific fields
-  currentMentorId?: string;
+  // Mentee-specific fields, if any beyond User + Profile
 }
 
 export interface Testimonial {
@@ -51,20 +40,27 @@ export interface Testimonial {
 }
 
 export interface SessionLog {
-  id: string;
-  mentorId: string;
-  menteeId: string;
-  sessionDate: string; // ISO string or Timestamp
-  durationMinutes: number;
+  id: string; // Firestore document ID
+  mentorId: string; // User UID
+  mentorName?: string; // For easier display
+  menteeId: string; // User UID
+  menteeName?: string; // For easier display
+  sessionDate: Timestamp; // Firestore Timestamp
+  topic: string;
+  durationMinutes?: number; // Optional
   notes?: string;
-  feedbackMentee?: string;
-  feedbackMentor?: string;
+  status?: 'scheduled' | 'completed' | 'cancelled';
+  // feedbackMentee?: string; // Consider separate feedback collection later
+  // feedbackMentor?: string;
 }
 
 export interface MentorshipAssignment {
-  id: string;
-  mentorId: string;
-  menteeId: string;
-  startDate: string; // ISO string or Timestamp
+  id: string; // Firestore document ID
+  mentorId: string; // User UID
+  mentorName?: string; // For easier display
+  menteeId: string; // User UID
+  menteeName?: string; // For easier display
+  startDate: Timestamp; // Firestore Timestamp
   status: 'active' | 'pending' | 'ended';
+  createdAt?: Timestamp;
 }

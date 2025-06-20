@@ -14,10 +14,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { UserRoleToggle } from "./UserRoleToggle";
-import type { UserRole, User } from "@/types";
+import type { UserRole } from "@/types";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,8 +29,6 @@ const formSchema = z.object({
 });
 
 export function RegistrationForm() {
-  const { toast } = useToast();
-  // const router = useRouter(); // AuthContext will handle redirection
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const { register: authRegister, loading: authLoading } = useAuth();
@@ -57,21 +54,13 @@ export function RegistrationForm() {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate API call & Firebase Auth via AuthContext
-    const newUser: User = {
-        id: '', // Will be set by AuthContext or backend
+    await authRegister({
         name: values.name,
         email: values.email,
+        password: values.password,
         role: values.role,
-        // profilePictureUrl can be set later or a default
-    };
-    authRegister(newUser);
-    // Toast for successful registration is good
-    toast({
-      title: "Registration Initiated",
-      description: "Creating your account...",
     });
-    // AuthContext's register function will handle redirection to /profile/create
+    // Redirection to /profile/create is handled by AuthContext
   }
 
   return (

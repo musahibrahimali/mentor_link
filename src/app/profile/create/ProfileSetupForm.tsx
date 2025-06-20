@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,20 +16,22 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
+// Skills and interests will now be comma-separated strings in the form,
+// but AuthContext's updateUserProfile will handle converting them to arrays for Firestore.
 const formSchema = z.object({
   bio: z.string().min(10, { message: "Bio must be at least 10 characters." }).max(500, { message: "Bio must not exceed 500 characters." }),
-  skills: z.string().min(1, { message: "Please list at least one skill." }),
-  interests: z.string().min(1, { message: "Please list at least one interest." }),
+  skills: z.string().min(1, { message: "Please list at least one skill (comma-separated)." }),
+  interests: z.string().min(1, { message: "Please list at least one interest (comma-separated)." }),
   availability: z.string().optional(),
+  profilePictureUrl: z.string().url({ message: "Please enter a valid URL for your profile picture." }).optional().or(z.literal('')),
 });
 
 export function ProfileSetupForm() {
-  const { toast } = useToast();
-  const router = useRouter();
+  const { user, updateUserProfile, loading: authLoading } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,19 +40,26 @@ export function ProfileSetupForm() {
       skills: "",
       interests: "",
       availability: "",
+      profilePictureUrl: "",
     },
   });
 
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        bio: user.bio || "",
+        // Convert arrays back to comma-separated strings for the form
+        skills: Array.isArray(user.skills) ? user.skills.join(", ") : "",
+        interests: Array.isArray(user.interests) ? user.interests.join(", ") : "",
+        availability: user.availability || "",
+        profilePictureUrl: user.profilePictureUrl || "",
+      });
+    }
+  }, [user, form]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Profile values:", values);
-    // In a real app, you would save this data to Firestore.
-    toast({
-      title: "Profile Updated",
-      description: "Your profile information has been saved.",
-    });
-    router.push("/profile"); // Redirect to view profile or dashboard
+    await updateUserProfile(values);
+    // Redirection to /profile is handled by updateUserProfile in AuthContext
   }
 
   return (
@@ -123,8 +133,24 @@ export function ProfileSetupForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save Profile</>}
+         <FormField
+          control={form.control}
+          name="profilePictureUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Profile Picture URL (Optional)</FormLabel>
+              <FormControl>
+                <Input type="url" placeholder="https://example.com/your-image.png" {...field} />
+              </FormControl>
+              <FormDescription>
+                Link to your profile picture. Use a service like Imgur or a direct link.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full sm:w-auto" disabled={authLoading || form.formState.isSubmitting}>
+          {authLoading || form.formState.isSubmitting ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save Profile</>}
         </Button>
       </form>
     </Form>

@@ -1,68 +1,76 @@
+
+"use client";
+
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Mentor } from "@/types";
+import type { Mentor as MentorType } from "@/types"; // Renamed to avoid conflict
 import { InterestForm } from "./InterestForm";
 import { Briefcase, CalendarDays, CheckCheck, GraduationCap, Lightbulb, Mail, MapPin, MessageSquare, Star, ExternalLink } from "lucide-react";
 import Link from "next/link";
-
-// Mock data - in a real app, this would be fetched based on params.id
-const mockMentors: Mentor[] = [
-   {
-    id: "1",
-    name: "Dr. Eleanor Vance",
-    email: "eleanor@example.com",
-    role: "mentor",
-    bio: "Passionate AI researcher with 10+ years in Machine Learning and Natural Language Processing. My work focuses on developing ethical and robust AI systems. I've mentored several students and professionals, helping them navigate complex projects and career paths in data science. I believe in a hands-on approach to mentorship, encouraging critical thinking and practical application of knowledge. Looking forward to connecting with individuals who are curious and driven to make an impact in the AI field.",
-    skills: ["Machine Learning", "Python", "NLP", "Deep Learning", "Research", "AI Ethics", "TensorFlow", "PyTorch"],
-    interests: ["AI Ethics", "Reinforcement Learning", "Academic Writing", "Quantum Computing", "Philosophy of Mind"],
-    availability: "Weekends, Tuesday evenings (PST)",
-    profilePictureUrl: "https://placehold.co/300x300/666699/F5F5FA.png?text=EV",
-  },
-  {
-    id: "2",
-    name: "Marcus Chen",
-    email: "marcus@example.com",
-    role: "mentor",
-    bio: "Full-stack developer and serial entrepreneur with two successful exits. My expertise lies in building scalable web applications using modern JavaScript frameworks and cloud technologies. I can help with everything from initial idea validation to technical architecture, product development, and go-to-market strategy. I'm particularly interested in mentoring aspiring founders and developers looking to build impactful SaaS products.",
-    skills: ["React", "Node.js", "TypeScript", "Product Management", "Agile", "AWS", "GraphQL", "Startup Funding"],
-    interests: ["SaaS", "FinTech", "Growth Hacking", "Angel Investing", "Distributed Systems"],
-    availability: "Monday & Wednesday evenings (EST)",
-    profilePictureUrl: "https://placehold.co/300x300/996699/FAF5FA.png?text=MC",
-  },
-   {
-    id: "3",
-    name: "Aisha Khan",
-    email: "aisha@example.com",
-    role: "mentor",
-    bio: "UX Design Lead with a strong focus on creating intuitive, user-centered, and accessible digital experiences. I have extensive experience in leading design teams, conducting user research, and implementing design systems. I'm passionate about helping new designers build strong portfolios, master design tools like Figma, and navigate the complexities of the UX industry. My mentorship style is collaborative and feedback-driven.",
-    skills: ["UX Design", "UI Design", "Figma", "User Research", "Accessibility", "Design Systems", "Prototyping", "Interaction Design"],
-    interests: ["Inclusive Design", "Mobile UX", "Service Design", "Design Leadership", "Ethical Design"],
-    availability: "Flexible, by appointment",
-    profilePictureUrl: "https://placehold.co/300x300/669999/F0F5F5.png?text=AK",
-  },
-   {
-    id: "4",
-    name: "David Miller",
-    email: "david@example.com",
-    role: "mentor",
-    bio: "Seasoned marketing strategist with over 15 years of experience in digital marketing, SEO, content creation, and brand development. I've worked with both startups and Fortune 500 companies to craft and execute impactful marketing campaigns. I can provide guidance on developing comprehensive marketing plans, optimizing online presence, and leveraging data analytics for growth. Looking to mentor marketing professionals at all levels.",
-    skills: ["Digital Marketing", "SEO", "Content Strategy", "Social Media Marketing", "Google Analytics", "PPC Advertising", "Brand Management", "Email Marketing"],
-    interests: ["E-commerce", "Brand Building", "Video Marketing", "Marketing Automation", "Consumer Psychology"],
-    availability: "Saturday mornings (CST)",
-  },
-];
+import { useEffect, useState, useCallback } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 export default function MentorProfilePage({ params }: { params: { id: string } }) {
-  const mentor = mockMentors.find(m => m.id === params.id);
+  const [mentor, setMentor] = useState<MentorType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const { user: authUser } = useAuth(); // Get current authenticated user
+
+  const fetchMentorProfile = useCallback(async (mentorId: string) => {
+    setIsLoading(true);
+    try {
+      const mentorRef = doc(db, "users", mentorId);
+      const docSnap = await getDoc(mentorRef);
+      if (docSnap.exists() && docSnap.data().role === 'mentor' && docSnap.data().isActive !== false) {
+        setMentor({ id: docSnap.id, ...docSnap.data() } as MentorType);
+      } else {
+        toast({ title: "Mentor Not Found", description: "This mentor profile is not available.", variant: "destructive" });
+        setMentor(null); // Explicitly set to null if not found or not a mentor
+      }
+    } catch (error) {
+      console.error("Error fetching mentor profile:", error);
+      toast({ title: "Error", description: "Could not load mentor profile.", variant: "destructive" });
+    }
+    setIsLoading(false);
+  }, [toast]);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchMentorProfile(params.id);
+    }
+  }, [params.id, fetchMentorProfile]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-12 px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-1 space-y-8 sticky top-24">
+            <Skeleton className="h-96 w-full rounded-lg" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+          </div>
+          <div className="lg:col-span-2 space-y-8">
+            <Skeleton className="h-40 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-64 w-full rounded-lg" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!mentor) {
     return (
       <div className="container mx-auto py-12 px-4 text-center">
         <h1 className="text-3xl font-bold text-destructive">Mentor Not Found</h1>
-        <p className="text-muted-foreground mt-2">The mentor profile you are looking for does not exist.</p>
+        <p className="text-muted-foreground mt-2">The mentor profile you are looking for does not exist or is not active.</p>
         <Button asChild className="mt-6">
           <Link href="/mentors">Back to Mentors List</Link>
         </Button>
@@ -70,15 +78,16 @@ export default function MentorProfilePage({ params }: { params: { id: string } }
     );
   }
 
+  const canExpressInterest = authUser && authUser.id !== mentor.id; // User is logged in and not viewing their own profile
+
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Column: Profile Card */}
         <div className="lg:col-span-1 space-y-8 sticky top-24">
            <Card className="shadow-xl overflow-hidden bg-card">
             <div className="relative h-64 w-full">
               <Image
-                src={mentor.profilePictureUrl || "https://placehold.co/400x400.png"}
+                src={mentor.profilePictureUrl || `https://placehold.co/400x400.png?text=${mentor.name.substring(0,2).toUpperCase()}`}
                 alt={mentor.name}
                 layout="fill"
                 objectFit="cover"
@@ -89,18 +98,23 @@ export default function MentorProfilePage({ params }: { params: { id: string } }
               <h1 className="text-3xl font-headline font-bold text-primary">{mentor.name}</h1>
               <p className="text-md text-muted-foreground flex items-center justify-center mt-1">
                 <Briefcase className="h-4 w-4 mr-1.5 text-accent" />
-                {/* Placeholder, replace with actual role/title */}
-                Senior AI Researcher 
+                {mentor.role === 'mentor' ? 'Mentor' : 'User'} 
+                {/* Could add a job title field to user profile later */}
               </p>
-              <div className="mt-3 flex items-center justify-center space-x-1 text-yellow-500">
+              {/* Placeholder for reviews */}
+              {/* <div className="mt-3 flex items-center justify-center space-x-1 text-yellow-500">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < 4 ? 'fill-current' : ''}`} />
                 ))}
                 <span className="text-sm text-muted-foreground ml-1">(4.8 from 23 reviews)</span>
-              </div>
-              <Button variant="outline" size="sm" className="mt-4 w-full">
-                <Mail className="h-4 w-4 mr-2" /> Contact {mentor.name.split(' ')[0]}
-              </Button>
+              </div> */}
+              {canExpressInterest && (
+                <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
+                    <Link href={`#express-interest`}>
+                        <Mail className="h-4 w-4 mr-2" /> Contact {mentor.name.split(' ')[0]}
+                    </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
           <Card className="shadow-xl bg-card">
@@ -115,14 +129,13 @@ export default function MentorProfilePage({ params }: { params: { id: string } }
           </Card>
         </div>
 
-        {/* Right Column: Details and Interest Form */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="shadow-xl bg-card">
             <CardHeader>
               <CardTitle className="font-headline text-2xl text-primary">About {mentor.name.split(' ')[0]}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-foreground whitespace-pre-line leading-relaxed">{mentor.bio}</p>
+              <p className="text-foreground whitespace-pre-line leading-relaxed">{mentor.bio || "No bio provided."}</p>
             </CardContent>
           </Card>
 
@@ -133,11 +146,11 @@ export default function MentorProfilePage({ params }: { params: { id: string } }
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              {mentor.skills.map((skill) => (
+              {mentor.skills && mentor.skills.length > 0 ? mentor.skills.map((skill) => (
                 <Badge key={skill} variant="secondary" className="text-sm px-3 py-1 bg-accent/10 text-accent border-accent/30">
                   {skill}
                 </Badge>
-              ))}
+              )) : <p className="text-sm text-muted-foreground">No skills listed.</p>}
             </CardContent>
           </Card>
 
@@ -148,27 +161,39 @@ export default function MentorProfilePage({ params }: { params: { id: string } }
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              {mentor.interests.map((interest) => (
+              {mentor.interests && mentor.interests.length > 0 ? mentor.interests.map((interest) => (
                 <Badge key={interest} variant="outline" className="text-sm px-3 py-1">
                   {interest}
                 </Badge>
-              ))}
+              )) : <p className="text-sm text-muted-foreground">No interests listed.</p>}
             </CardContent>
           </Card>
           
-          <Card className="shadow-xl bg-card">
-            <CardHeader>
-              <CardTitle className="font-headline text-xl text-primary flex items-center">
-                <MessageSquare className="h-5 w-5 mr-2 text-accent" /> Express Interest
-              </CardTitle>
-              <CardDescription>
-                Ready to connect with {mentor.name}? Send a message to start the conversation.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <InterestForm mentorName={mentor.name} mentorId={mentor.id} />
-            </CardContent>
-          </Card>
+          {canExpressInterest && (
+            <Card className="shadow-xl bg-card" id="express-interest">
+                <CardHeader>
+                <CardTitle className="font-headline text-xl text-primary flex items-center">
+                    <MessageSquare className="h-5 w-5 mr-2 text-accent" /> Express Interest
+                </CardTitle>
+                <CardDescription>
+                    Ready to connect with {mentor.name}? Send a message to start the conversation.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <InterestForm mentorName={mentor.name} mentorId={mentor.id} />
+                </CardContent>
+            </Card>
+          )}
+          {!authUser && (
+             <Card className="shadow-xl bg-card">
+                <CardHeader>
+                    <CardTitle className="font-headline text-xl text-primary">Interested in {mentor.name}'s mentorship?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-4">Please <Link href="/login" className="text-primary underline">log in</Link> or <Link href="/register" className="text-primary underline">sign up</Link> to express your interest.</p>
+                </CardContent>
+             </Card>
+          )}
         </div>
       </div>
     </div>
