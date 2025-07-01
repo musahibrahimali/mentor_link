@@ -231,7 +231,7 @@ export default function AdminDashboardPage() {
             </p>
           </CardContent>
         </Card>
-         <Card className="shadow-lg">
+        <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Assignments</CardTitle>
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
@@ -241,7 +241,7 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-muted-foreground">Total mentorship pairs</p>
           </CardContent>
         </Card>
-         <Card className="shadow-lg">
+        <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Logged Sessions</CardTitle>
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
@@ -261,7 +261,7 @@ export default function AdminDashboardPage() {
           <CardDescription>View and manage user roles and status.</CardDescription>
         </CardHeader>
         <CardContent>
-           <div className="mb-4">
+          <div className="mb-4">
             <Input placeholder="Search users by name or email..." className="max-w-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <Table>
@@ -414,7 +414,7 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent>
             {/* Search/filter for logs could be added here */}
-           <Table>
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Mentor</TableHead>
@@ -439,7 +439,7 @@ export default function AdminDashboardPage() {
                 );
               })}
             </TableBody>
-           </Table>
+          </Table>
         </CardContent>
       </Card>
       
@@ -453,7 +453,6 @@ export default function AdminDashboardPage() {
             <p className="text-sm text-muted-foreground">Advanced scheduling features (e.g., direct Google Calendar integration for users) would typically require more extensive setup or backend services.</p>
         </CardContent>
       </Card>
-
     </div>
   );
 }
