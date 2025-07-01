@@ -62,21 +62,21 @@ const testimonials: Testimonial[] = [
     name: "Sarah L.",
     role: "Mentee",
     quote: "MentorLink helped me find an incredible mentor who guided me through a major career transition. The platform is so easy to use!",
-    imageUrl: "https://placehold.co/100x100.png",
+    imageUrl: "/account.png",
   },
   {
     id: "2",
     name: "John B.",
     role: "Mentor",
     quote: "Being a mentor on MentorLink has been a rewarding experience. I've connected with amazing mentees and helped them achieve their goals.",
-    imageUrl: "https://placehold.co/100x100.png",
+    imageUrl: "/account.png",
   },
   {
     id: "3",
     name: "Emily K.",
     role: "Mentee",
     quote: "The AI matching feature is fantastic! It suggested a mentor whose expertise perfectly aligned with my learning objectives.",
-    imageUrl: "https://placehold.co/100x100.png",
+    imageUrl: "/account.png",
   },
 ];
 
@@ -104,7 +104,7 @@ export default function Home() {
           </div>
           <div className="mt-16">
             <Image 
-              src="https://placehold.co/1200x600.png" 
+              src="/banner.JPG" 
               alt="Mentorship collaboration" 
               width={1200} 
               height={600} 
